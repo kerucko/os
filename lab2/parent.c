@@ -13,9 +13,9 @@
 int main(int argc, const char *argv[]) {
     int file_descriptors1[2]; // P -> C1
     int file_descriptors2[2]; // P -> C2
-    int p1 = pipe(file_descriptors1);
-    int p2 = pipe(file_descriptors2);
-    if (p1 == -1 || p2 == -1) {
+    int pipe1 = pipe(file_descriptors1);
+    int pipe2 = pipe(file_descriptors2);
+    if (pipe1 == -1 || pipe2 == -1) {
         printf("pipe error\n");
         return 1;
     }
@@ -33,19 +33,17 @@ int main(int argc, const char *argv[]) {
     switch (fork()) {
     case -1:
         printf("fork error\n");
+        return 1;
         break;
     case 0:
         // child 1
+        close(file_descriptors1[WRITE]);
         if (dup2(file_descriptors1[READ], STDIN_FILENO) == -1) {
             perror("dup error");
             return 1;
         }
         if (dup2(file1, STDOUT_FILENO) == -1) {
             perror("dup error");
-            return 1;
-        }
-        if (close(file_descriptors1[WRITE]) == -1) {
-            perror("fd1 close error");
             return 1;
         }
         char *Child1_argv[] = {"child1", NULL};
@@ -58,9 +56,11 @@ int main(int argc, const char *argv[]) {
         switch (fork()) {
         case -1:
             printf("fork error");
+            return 1;
             break;
         case 0:
             // child 2
+            close(file_descriptors2[WRITE]);
             if (dup2(file_descriptors2[READ], STDIN_FILENO) == -1) {
                 perror("dup error");
                 return 1;
@@ -69,10 +69,7 @@ int main(int argc, const char *argv[]) {
                 perror("dup error");
                 return 1;
             }
-            if (close(file_descriptors2[WRITE]) == -1) {
-                perror("fd2 close error");
-                return 1;
-            }
+            
             char *Child2_argv[] = {"child2", NULL};
             if (execv("child2", Child2_argv) == -1) {
                 perror("exec child2 error");
@@ -85,15 +82,22 @@ int main(int argc, const char *argv[]) {
             printf("Enter strings:\n");
             int k = 0;
             while(1) {
-                char line[30];
+                char line[50];
                 if(gets(line) == NULL) {
                     perror("gets error");
+                    return 1;
                 }
                 int length = strlen(line);
                 k++;
                 if (length == 0 && k > 1) {
-                    write(file_descriptors1[WRITE], &length, sizeof(length));
-                    write(file_descriptors2[WRITE], &length, sizeof(length));
+                    if(write(file_descriptors1[WRITE], &length, sizeof(length)) == -1) {
+                        perror("write to child1 error");
+                        return 1;
+                    }
+                    if (write(file_descriptors2[WRITE], &length, sizeof(length)) == -1) {
+                        perror("write to child2 error");
+                        return 1;
+                    }
                     close(file_descriptors1[WRITE]);
                     close(file_descriptors2[WRITE]);
                     return 0;
@@ -101,12 +105,24 @@ int main(int argc, const char *argv[]) {
                 if (k > 1) {
                 if (k % 2) {
                     // pipe1
-                    write(file_descriptors1[WRITE], &length, sizeof(length));
-                    write(file_descriptors1[WRITE], &line, sizeof(char) * length);
+                    if (write(file_descriptors1[WRITE], &length, sizeof(length)) == -1) {
+                        perror("write length to child1 error");
+                        return 1;
+                    }
+                    if(write(file_descriptors1[WRITE], &line, sizeof(char) * length) == -1 {
+                        perror("write line to child1 error");
+                        return 1;
+                    }
                 } else {
                     // pipe2
-                    write(file_descriptors2[WRITE], &length, sizeof(length));
-                    write(file_descriptors2[WRITE], &line, sizeof(char) * length);
+                    if(write(file_descriptors2[WRITE], &length, sizeof(length)) == -1) {
+                        perror("write length to child2 error");
+                        return 1;
+                    }
+                    if(write(file_descriptors2[WRITE], &line, sizeof(char) * length) == -1) {
+                        perror("write line to child2 error");
+                        return 1;
+                    }
                 }
                 }
             }
