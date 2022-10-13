@@ -16,20 +16,25 @@ int main(int argc, const char *argv[]) {
             perror("read child2 error");
             return 1;
         }
+
         if (length == 0) {
             break;
         }
+
         if (read(STDIN_FILENO, &line, sizeof(char) * length) == -1) {
             perror("read child2 error");
             return 1;
         }
+
         char swap;
-        for (int i = 0; i < length / 2; i++) {
+        for (int i = 0; i < length / 2; ++i) {
             swap = line[i];
             line[i] = line[length - i - 1];
             line[length - i - 1] = swap;
         }
+
         printf("%s\n", line);
     }
+
     return 0;
 }
