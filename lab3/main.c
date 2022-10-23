@@ -5,11 +5,12 @@
 #include <unistd.h>
 
 const int size = 17;
+int matrix[17][17], new_matrix[17][17];
+int window;
 
 typedef struct thread_arguments{
     int number_of_threads;
-    int *matrix;
-    int *new_matrix;
+    int current_thread;
 }thread_arguments;
 
 
@@ -22,7 +23,7 @@ void print_matrix(int matrix[size][size]) {
     }
 }
 
-void fill_matrix(int matrix[size][size]) {
+void fill_matrix() {
     srand(time(NULL));
     for (int i = 1; i < size - 1; ++i) {
         for (int j = 1; j < size - 1; ++j) {
@@ -43,7 +44,7 @@ void fill_matrix(int matrix[size][size]) {
     }
 }
 
-void result_to_matrix(int matrix[size][size], int new_matrix[size][size]) {
+void result_to_matrix() {
     for (int i = 1; i < size - 1; ++i) {
         for (int j = 1; j < size - 1; ++j) {
             matrix[i][j] = new_matrix[i][j];
@@ -64,19 +65,19 @@ void result_to_matrix(int matrix[size][size], int new_matrix[size][size]) {
 }
 
 void sort(int array[], int length) {
-    int tmp;
+    int swap;
     for (int i = 0; i < length - 1; ++i) {
         for (int j = 0; j < length - i - 1; ++j) {
             if (array[j] > array[j + 1]) {
-                tmp = array[j];
+                swap = array[j];
                 array[j] = array[j + 1];
-                array[j + 1] = tmp;
+                array[j + 1] = swap;
             }
         }
     }
 }
 
-int median(int i, int j, int matrix[size][size]) {
+int median(int i, int j) {
     int numbers[9];
     int count = 0;
     for (int l = i - 1; l <= i + 1; ++l) {
@@ -89,45 +90,54 @@ int median(int i, int j, int matrix[size][size]) {
     return numbers[4];
 }
 
-void filter_for_string(int matrix[size][size], int new_matrix[size][size], int number_of_string) {
+void filter_for_string(int number_of_string) {
     for (int j = 1; j < size - 1; ++j) {
-        new_matrix[size][j] = median(size, j, matrix);
+        new_matrix[number_of_string][j] = median(number_of_string, j);
     }
 }
 
-// void* thread_filter(void* arg) {
-//     thread_arguments data = *((thread_arguments*) arg);
-//     for (int i = 0; i < size; i += data.number_of_threads) {
-//         filter_for_string(data.martix, data.new_matrix, i);
-//     }
-// }
+void* thread_filter(void* arg) {
+    thread_arguments data = *((thread_arguments*) arg);
+    for (int i = data.current_thread; i < size; i += data.number_of_threads) {
+        filter_for_string(i);
+    }
+}
 
 int main(int argc, const char *argv[]) {
-    int array[size][size], new_array[size][size];
     int overlays, number_of_threads;
-
-    printf("number of filter overlays = ");
+    number_of_threads = atoi(argv[1]);
+    printf("number of threads = %d\n", number_of_threads);
+    printf("number of overlays = ");
     scanf("%d", &overlays);
-    printf("number of threads = ");
-    scanf("%d", &number_of_threads);
-
-    fill_matrix(array);
+    printf("size of window = ");
+    scanf("%d", &window);
+    fill_matrix();
     
-    printf("array:\n");
-    print_matrix(array);
+    printf("matrix:\n");
+    print_matrix(matrix);
 
     for (int k = 0; k < overlays; ++k) {
-        for (int i = 1; i < size - 1; ++i) {
-            for (int j = 1; j < size - 1; ++j) {
-                new_array[i][j] = median(i, j, array);
+        pthread_t threads[number_of_threads];
+        thread_arguments* data = malloc(sizeof(thread_arguments) * number_of_threads);
+        for (int i = 0; i < number_of_threads; ++i) {
+            data[i].current_thread = i;
+            data[i].number_of_threads = number_of_threads;
+        }
+        for (int i = 0; i < number_of_threads; ++i) {
+            if (pthread_create(&threads[i], NULL, &thread_filter, &data[i]) != 0) {
+                perror("Failed to create thread");
             }
-        } 
-    
-        result_to_matrix(array, new_array);
+        }
+        for (int i = 0; i < number_of_threads; ++i) {
+            if (pthread_join(threads[i], NULL) != 0) {
+                perror("Failed to join thread");
+            }
+        }
+        result_to_matrix();
     }
 
-    printf("new array:\n");
-    print_matrix(array);
+    printf("new matrix:\n");
+    print_matrix(matrix);
 
     return 0;
 }
