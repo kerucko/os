@@ -15,8 +15,8 @@ typedef struct thread_arguments{
 
 
 void print_matrix(int matrix[size][size]) {
-    for (int i = 1; i < size - 1; ++i) {
-        for (int j = 1; j < size - 1; ++j) {
+    for (int i = window / 2; i < size - window / 2; ++i) {
+        for (int j = window / 2; j < size - window / 2; ++j) {
             printf("%d ", matrix[i][j]);
         }
         printf("\n");
@@ -78,16 +78,17 @@ void sort(int array[], int length) {
 }
 
 int median(int i, int j) {
-    int numbers[9];
+    int size_sort = window * window - 1;
+    int numbers[size_sort];
     int count = 0;
-    for (int l = i - 1; l <= i + 1; ++l) {
-        for (int k = j - 1; k <= j + 1; ++k) {
+    for (int l = i - window / 2; l <= i + window / 2; ++l) {
+        for (int k = j - window / 2; k <= j + window / 2; ++k) {
             numbers[count] = matrix[l][k];
             ++count;
         }
     }
-    sort(numbers, 9);
-    return numbers[4];
+    sort(numbers, size_sort);
+    return numbers[size_sort / 2];
 }
 
 void filter_for_string(int number_of_string) {
@@ -109,8 +110,9 @@ int main(int argc, const char *argv[]) {
     printf("number of threads = %d\n", number_of_threads);
     printf("number of overlays = ");
     scanf("%d", &overlays);
-    printf("size of window = ");
+    printf("size of window(odd number) = ");
     scanf("%d", &window);
+    
     fill_matrix();
     
     printf("matrix:\n");
