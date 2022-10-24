@@ -6,7 +6,7 @@
 
 const int size = 17;
 int matrix[17][17], new_matrix[17][17];
-int window;
+int window, frame;
 
 typedef struct thread_arguments{
     int number_of_threads;
@@ -14,9 +14,18 @@ typedef struct thread_arguments{
 }thread_arguments;
 
 
-void print_matrix(int matrix[size][size]) {
-    for (int i = window / 2; i < size - window / 2; ++i) {
-        for (int j = window / 2; j < size - window / 2; ++j) {
+void print_matrix() {
+    for (int i = frame; i < size - frame; ++i) {
+        for (int j = frame; j < size - frame; ++j) {
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+void print_without_frame() {
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
             printf("%d ", matrix[i][j]);
         }
         printf("\n");
@@ -25,42 +34,46 @@ void print_matrix(int matrix[size][size]) {
 
 void fill_matrix() {
     srand(time(NULL));
-    for (int i = 1; i < size - 1; ++i) {
-        for (int j = 1; j < size - 1; ++j) {
+    for (int i = frame; i < size - frame; ++i) {
+        for (int j = frame; j < size - frame; ++j) {
             matrix[i][j] = rand() % 10;
         }
     }
+
     for (int i = 1; i < size - 1; ++i) {
-        matrix[i][0] = matrix[i][1];
+        for (int j = 0; j < frame; ++j) {
+            matrix[i][j] = matrix[i][frame];
+            matrix[i][size - j - 1] = matrix[i][size - frame - 1];
+        }
     }
-    for (int i = 1; i < size - 1; ++i) {
-        matrix[i][size - 1] = matrix[i][size - 2];
-    }
+
     for (int i = 0; i < size; ++i) {
-        matrix[0][i] = matrix[1][i];
-    }
-    for (int i = 0; i < size; ++i) {
-        matrix[size - 1][i] = matrix[size - 2][i];
+        for (int j = 0; j < frame; ++j) {
+            matrix[j][i] = matrix[frame][i];
+            matrix[size - j -1][i] = matrix[size - frame - 1][i];  
+        }
     }
 }
 
 void result_to_matrix() {
-    for (int i = 1; i < size - 1; ++i) {
-        for (int j = 1; j < size - 1; ++j) {
+    for (int i = frame; i < size - frame; ++i) {
+        for (int j = frame; j < size - frame; ++j) {
             matrix[i][j] = new_matrix[i][j];
         }
     }
+
     for (int i = 1; i < size - 1; ++i) {
-        matrix[i][0] = matrix[i][1];
+        for (int j = 0; j < frame; ++j) {
+            matrix[i][j] = matrix[i][frame];
+            matrix[i][size - j - 1] = matrix[i][size - frame - 1];
+        }
     }
-    for (int i = 1; i < size - 1; ++i) {
-        matrix[i][size - 1] = matrix[i][size - 2];
-    }
+
     for (int i = 0; i < size; ++i) {
-        matrix[0][i] = matrix[1][i];
-    }
-    for (int i = 0; i < size; ++i) {
-        matrix[size - 1][i] = matrix[size - 2][i];
+        for (int j = 0; j < frame; ++j) {
+            matrix[j][i] = matrix[frame][i];
+            matrix[size - j -1][i] = matrix[size - frame - 1][i];  
+        }
     }
 }
 
@@ -81,18 +94,20 @@ int median(int i, int j) {
     int size_sort = window * window - 1;
     int numbers[size_sort];
     int count = 0;
-    for (int l = i - window / 2; l <= i + window / 2; ++l) {
-        for (int k = j - window / 2; k <= j + window / 2; ++k) {
+
+    for (int l = i - frame; l <= i + frame; ++l) {
+        for (int k = j - frame; k <= j + frame; ++k) {
             numbers[count] = matrix[l][k];
             ++count;
         }
     }
+
     sort(numbers, size_sort);
     return numbers[size_sort / 2];
 }
 
 void filter_for_string(int number_of_string) {
-    for (int j = 1; j < size - 1; ++j) {
+    for (int j = frame; j < size - frame; ++j) {
         new_matrix[number_of_string][j] = median(number_of_string, j);
     }
 }
@@ -112,11 +127,12 @@ int main(int argc, const char *argv[]) {
     scanf("%d", &overlays);
     printf("size of window(odd number) = ");
     scanf("%d", &window);
-    
+    frame = window / 2;
+
     fill_matrix();
     
     printf("matrix:\n");
-    print_matrix(matrix);
+    print_matrix();
 
     for (int k = 0; k < overlays; ++k) {
         pthread_t threads[number_of_threads];
@@ -125,11 +141,13 @@ int main(int argc, const char *argv[]) {
             data[i].current_thread = i;
             data[i].number_of_threads = number_of_threads;
         }
+
         for (int i = 0; i < number_of_threads; ++i) {
             if (pthread_create(&threads[i], NULL, &thread_filter, &data[i]) != 0) {
                 perror("Failed to create thread");
             }
         }
+
         for (int i = 0; i < number_of_threads; ++i) {
             if (pthread_join(threads[i], NULL) != 0) {
                 perror("Failed to join thread");
@@ -139,7 +157,7 @@ int main(int argc, const char *argv[]) {
     }
 
     printf("new matrix:\n");
-    print_matrix(matrix);
+    print_matrix();
 
     return 0;
 }
