@@ -4,8 +4,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
-const int size = 17;
-int matrix[17][17], new_matrix[17][17];
+const int size = 20;
+int matrix[20][20], new_matrix[20][20];
 int window, frame;
 
 typedef struct thread_arguments{
@@ -145,12 +145,14 @@ int main(int argc, const char *argv[]) {
         for (int i = 0; i < number_of_threads; ++i) {
             if (pthread_create(&threads[i], NULL, &thread_filter, &data[i]) != 0) {
                 perror("Failed to create thread");
+                return 1;
             }
         }
 
         for (int i = 0; i < number_of_threads; ++i) {
             if (pthread_join(threads[i], NULL) != 0) {
                 perror("Failed to join thread");
+                return 1;
             }
         }
         result_to_matrix();
